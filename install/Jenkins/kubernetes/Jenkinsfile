@@ -1,0 +1,79 @@
+pipeline {
+
+    agent any
+
+    environment {
+            SERVER_IP = "216.218.200.224"
+            SOURCE_PATH = "${WORKSPACE}/microservices-example/install/deploy/kubernetes/green"
+            DEPLOY_PATH = "/tmp/green"
+            NAME_SPACE = "green"
+        }
+
+    stages {
+		stage('Clone Repo') {
+			//steps {
+			//	checkout scm
+			//}
+			steps {
+			    	checkout([$class: 'GitSCM',
+					branches: [[name: '*/master']],
+					doGenerateSubmoduleConfigurations: false,
+					extensions: [[$class: 'CleanCheckout']],
+					submoduleCfg: [],
+					//userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/DevOpsPOC.git']]
+					userRemoteConfigs: [[credentialsId: '16e9c02e-8b5a-41de-b05e-5c0ac770dc97', url: 'https://github.com/nisum-inc/DevOpsPOC.git']]
+
+				])
+			}
+		}
+
+		stage('ConfigCopy') {
+		    steps {
+	    	    sh "scp -r ${SOURCE_PATH}/*.yaml devops@${SERVER_IP}:${DEPLOY_PATH}/."
+	    	 }
+		}
+
+        stage('CreateNameSpace') {
+		    steps {
+		        script {
+		            //def nsCheck = sh script: " ssh devops@${SERVER_IP} 'kubectl get namespace |cut -d \" \" -f 1 | grep green'" , returnStdout: true
+                    def nsCheck = sh script: 'ssh devops@216.218.200.224 "check=\\$(kubectl get namespace |cut -d \' \' -f 1 | grep green); if [[ ! -z \\$check  ]]; then  echo pass;  else echo failed; fi"', returnStdout: true
+
+		            if (nsCheck.trim().equals('pass')) {
+
+	    	            echo "Green Name Space Already Exists"
+	    	        }
+	    	        else{
+	    	        echo "Crearting Name Space Green"
+	    	        sh "ssh devops@${SERVER_IP} 'kubectl create namespace ${NAME_SPACE}'"
+	    	          }
+	    	        }
+	    	 }
+		}
+
+        stage('CleanNameSpace') {
+		    steps {
+	    	    sh "ssh devops@${SERVER_IP} 'kubectl delete --all deployment --namespace=${NAME_SPACE}'"
+	            sh "ssh devops@${SERVER_IP} 'kubectl delete --all service --namespace=${NAME_SPACE}'"
+		    }
+		}
+
+		stage('DeployGreen') {
+		    steps {
+		        timeout(time: 20, unit: 'SECONDS') {
+        	        sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/discovery-server-deployment.yaml --namespace=${NAME_SPACE}'"
+                }
+                timeout(time: 20, unit: 'SECONDS') {
+                sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/config-server-deployment.yaml --namespace=${NAME_SPACE}'"
+                }
+                sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/admin-application-deployment.yaml --namespace=${NAME_SPACE}'"
+                sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/biz-application-deployment.yaml --namespace=${NAME_SPACE}'"
+                sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/news-application-deployment.yaml --namespace=${NAME_SPACE}'"
+                sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/website-application-deployment.yaml --namespace=${NAME_SPACE}'"
+                sh "ssh devops@${SERVER_IP} 'kubectl apply -f ${DEPLOY_PATH}/proxy-server-deployment.yaml --namespace=${NAME_SPACE}'"
+        	}
+        }
+
+
+}
+}
