@@ -1,138 +1,4 @@
-/* Array list for all applications, will loop through this array to create and publish image to docker hub  */
-//def appList = ['discovery_server', 'config_server', 'biz_application', 'admin_application', 'news_application', 'website_application', 'proxy_server']
-def appList = [
-                [appName: 'discovery_server',   appPort: '7001'],
-                [appName: 'config_server',      appPort: '8001'],
-                [appName: 'biz_application',    appPort: '9601'],
-                [appName: 'admin_application',  appPort: '9401'],
-                [appName: 'news_application',   appPort: '9201'],
-                [appName: 'website_application',appPort: '9001'],
-                [appName: 'proxy_server',       appPort: '8080']]
-
-/*def appList = [
-                [appName: 'discovery_server',   appPort: '7001'],
-                [appName: 'config_server',      appPort: '8001'],
-                [appName: 'biz_application',    appPort: '9601']]*/
-
-def discoveryServer = [name: 'discovery_server', port: '7001']
-def configServer    = [name: 'config_server'   , port: '8001']
-def proxyServer     = [name: 'proxy_server'   ,  port: '8080']
-
-def parallelStagesBuild = appList.collectEntries {
-    ["${it}" : generateStageBuild(it.appName)]
-}
-
-def parallelStagesTag = appList.collectEntries {
-    ["${it}" : generateStageTag(it.appName)]
-}
-
-def parallelStagesPublish = appList.collectEntries {
-    ["${it}" : generateStagePublish(it.appName)]
-}
-
-def parallelTestImages = appList.collectEntries {
-    ["${it}" : generateStageTestImage(it.appName, it.appPort)]
-}
-
-def generateStageBuild(app) {
-    return {
-        script {
-            stage("stage: ${app}") {
-                def application = """${app}"""
-                application = application.replaceAll("_", "-")
-
-                /* Copying jar file to relavant directory */
-                sh script: "cp ${WORKSPACE}/microservices-example/" + application + "*/target/" + application + "*SNAPSHOT.jar ${WORKSPACE}/microservices-example/install/deploy/docker/${app}/" + application + "-SNAPSHOT.jar"
-
-                /* Building docker image */
-                docker.build(registry + "/${app}", "-f ${WORKSPACE}/microservices-example/install/deploy/docker/${app}/Dockerfile ${WORKSPACE}/microservices-example/install/deploy/docker")
-            }
-        }
-    }
-}
-
-def generateStageTag(app) {
-    return {
-        script {
-            /* Assigning tag as Jenkins Build_Number for tracking pupose */
-            sh script: "docker tag " + registry + "/${app}:latest " + registry + "/${app}:$BUILD_NUMBER"
-        }
-    }
-}
-
-def generateStagePublish(app) {
-    return {
-        script {
-            /* Uploading image to docker hub using docker cli */
-            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.registryCredential}",
-            usernameVariable: 'dockerUser', passwordVariable: 'dockerPassword']]) {
-                sh "docker login -u$dockerUser -p$dockerPassword; docker push ${registry}/${app}:$BUILD_NUMBER;docker push ${registry}/${app}:latest"
-            }
-        }
-    }
-}
-
-def generateStageTestImage(app, port) {
-    return {
-            if ( app.equals('discovery_server') || app.equals('config_server') ) {
-                echo "Already running ${app}!"
-            } else {
-               sh script: "[[ ! -z \$(docker ps | grep ${app}) ]] && docker stop ${app} || echo not running"
-               sh script: "[[ ! -z \$(docker ps -a | grep ${app}) ]] && docker rm ${app} || echo already stopped removing it"
-               sh script: "docker run -d -p ${port}:${port} --network 'test' --hostname=${app} --restart=always --name ${app} ${registry}/${app}"
-            }
-    }
-}
-
-def deployServer(depServer, depPort) {
-    sh script: "[[ ! -z \$(docker ps | grep ${depServer}) ]] && docker stop ${depServer} || echo not running"
-    sh script: "[[ ! -z \$(docker ps -a | grep ${depServer}) ]] && docker rm ${depServer} || echo already stopped removing it"
-    sh script: "docker run -d -p ${depPort}:${depPort} --network 'test' --hostname=${depServer} --restart=always --name ${depServer} ${registry}/${depServer}"
-}
-
-def stopContainer(containerName) {
-    sh script: "[[ ! -z \$(docker ps | grep ${containerName}) ]] && docker stop ${containerName} || echo container ${containerName} already stopped!"
-}
-
-def startContainer(containerName) {
-    sh script: "docker start ${containerName}"
-}
-
-def restartContainer(containerName) {
-    stopContainer(containerName)
-    startContainer(containerName)
-}
-
-def checkHTTPResponse(host, port){
-
-        def count = 0
-        def output = ''
-        def flag = false
-
-        while (count != 180) {
-            def status = sh (returnStatus: true, script: "curl -Is http://${host}:${port} | head -n 1 > curlOutput.txt")
-            output = readFile('curlOutput.txt').trim()
-
-            if ( output.equals('HTTP/1.1 200')){
-                flag = true
-                break
-            } else {
-                flag = false
-                sleep(1)
-            }
-
-            count += 1
-            println("status : " + status)
-            println("output : " + output)
-            println("count : " + count)
-        }
-
-        if(flag) {
-            println("Application deployed successfully, smoke test has been passed. Now pushing images to docker-hub")
-        } else {
-            error("Something wrong with application stack while deploying or application not deployed successfully, please go through Jenkins logs. To troubleshoot check URL " + "http://" + host + ":" + port + " if not working, then deployement was unsuccessful!")
-        }
-}
+def app = [appName: 'news-application',   appPort: '9201']
 
 pipeline {
 
@@ -143,7 +9,7 @@ pipeline {
     dockerHost = 'localhost'
   }
 
-  agent any
+  agent { label 'docker-host' }
 
   stages {
     stage('Clone Application') {
@@ -160,65 +26,60 @@ pipeline {
             doGenerateSubmoduleConfigurations: false,
             extensions: [[$class: 'CleanCheckout']],
             submoduleCfg: [],
-            userRemoteConfigs: [[credentialsId: '16e9c02e-8b5a-41de-b05e-5c0ac770dc97', url: 'https://github.com/nisum-inc/DevOpsPOC.git']]
+            userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
+            //userRemoteConfigs: [[credentialsId: '16e9c02e-8b5a-41de-b05e-5c0ac770dc97', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
             ])
         }*/
     }
     stage('Build Application') {
-    	steps{
-    		sh "cd ${WORKSPACE}/microservices-example && ${MAVEN_HOME}/bin/mvn -Dmaven.test.failure.ignore -Dmaven.test.skip=true clean package"
+    	/* this is temporary step, ideally jar file should be downloaded from any artifact server. */
+    	steps {
+    		sh "cd ${WORKSPACE} && ${MAVEN_HOME}/bin/mvn -Dmaven.test.failure.ignore -Dmaven.test.skip=true clean package"
     	}
     }
 
     stage('Building Images') {
       steps{
         script {
-            parallel parallelStagesBuild
+                //def application = """${app}"""
+                //application = application.replaceAll("_", "-")
+
+                /* Copying jar file to relavant directory */
+                sh script: "cp ${WORKSPACE}/target/" + app.appName + "*SNAPSHOT.jar ${WORKSPACE}/install/deploy/docker/" + app.appName.replaceAll("-", "_") + "/"
+
+                /* Building docker image */
+                docker.build(registry + "/" + app.appName.replaceAll("-", "_"), "-f ${WORKSPACE}/install/deploy/docker/" + app.appName.replaceAll("-", "_") + "/Dockerfile ${WORKSPACE}/install/deploy/docker")
         }
       }
     }
-    stage('Test Image') {
-        steps{
-            script {
-                deployServer(discoveryServer.name, discoveryServer.port)
-                sleep 10
-                deployServer(configServer.name, configServer.port)
-                sleep 10
-                echo "Testing"
-                parallel parallelTestImages
-            }
-        }
-    }
-    stage('Restart Proxy Server'){
-        steps {
-            script {
-                restartContainer(proxyServer.name)
-            }
-        }
-    }
-    stage('Test HTTP response') {
-        steps {
-            script {
-                checkHTTPResponse(dockerHost, proxyServer.port)
-            }
-        }
 
-    }
     stage('Tagging Images') {
         steps{
             script {
-                parallel parallelStagesTag
+
+                commit= sh (returnStatus: true, script: "git log -1 --pretty=%h > gitOutput.txt")
+                gitStatus = readFile('gitOutput.txt').trim()
+
+                /* Assigning tag as Jenkins git pretty name and Build_Number for tracking pupose */
+                sh script: "docker tag " + registry + "/" + app.appName.replaceAll("-", "_") + ":latest " + registry + "/" + app.appName.replaceAll("-", "_") + ":" + gitStatus + "_$BUILD_NUMBER"
             }
         }
     }
     stage('Push Images To Docker-Hub') {
        steps{
            script{
+
+               commit= sh (returnStatus: true, script: "git log -1 --pretty=%h > gitOutput.txt")
+               gitStatus = readFile('gitOutput.txt').trim()
                try {
-                   parallel parallelStagesPublish
+                   /* Uploading image to docker hub using docker cli */
+                   withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.registryCredential}",
+                   usernameVariable: 'dockerUser', passwordVariable: 'dockerPassword']]) {
+                      sh "docker login -u$dockerUser -p$dockerPassword; docker push ${env.registry}/" + app.appName.replaceAll("-", "_") + ":" + gitStatus + "_$BUILD_NUMBER;docker push ${env.registry}/" + app.appName.replaceAll("-", "_") + ":latest"
+                   }
                } finally {
-                   /* logging out docker account */
-                   sh "docker logout"
+                    /* logging out docker account */
+                    sh "docker logout"
                }
            }
        }
