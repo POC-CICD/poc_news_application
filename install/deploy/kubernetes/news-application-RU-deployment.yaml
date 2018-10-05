@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ru-deployment
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: news-application
+  namespace: ru-deployment
+  labels:
+    name: news-application
+    service: news-application-service
+spec:
+  replicas: 2
+  minReadySeconds: 15
+  selector:
+    matchLabels:
+      name: news-application
+      type: frontend
+  strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 1
+          maxSurge: 1
+  template:
+    metadata:
+      labels:
+        name: news-application
+        type: frontend
+    spec:
+      containers:
+      - name: news-application
+        image: nisumpk/news_application
+        ports:
+        - containerPort: 9201
+        env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: SERVER_PORT
+          value: -Dserver.port=9201
+        - name: DISCOVERY_SERVER_URL
+          value: "-Deureka.client.serviceUrl.defaultZone=http://discovery-server-service.ru-deployment.svc.cluster.local:7001/eureka/"
+        - name: BIZ_APPLICATION_URL
+          value: "-Dbiz.application.url=http://biz-application-service.default.svc.cluster.local:9601"
+        command: ["java"]
+        args: ["$(SERVER_PORT)", "$(BIZ_APPLICATION_URL)", "$(DISCOVERY_SERVER_URL)",  "-Deureka.instance.preferIpAddress=true", "-Deureka.instance.ipAddress=$(MY_POD_IP)", "-jar", "/usr/src/news-application-SNAPSHOT.jar"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: news-application-service
+  namespace: ru-deployment
+  labels:
+    name: news-application-service
+spec:
+  type: NodePort
+  ports:
+  - port: 9201
+    nodePort: 30056
+    targetPort: 9201
+    protocol: TCP
+
+  selector:
+    name: news-application
