@@ -2,7 +2,7 @@ apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
   name: news-application-blue
-  namespace: default
+  namespace: devopspoc
   labels:
     name: news-application
     service: news-application-service
