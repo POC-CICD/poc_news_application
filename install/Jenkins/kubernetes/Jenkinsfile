@@ -4,7 +4,7 @@ pipeline {
 
     environment {
 
-            appName = 'news_application'
+            appName = 'news-application'
 
             /* Do not change below this line! */
             k8configPath = "${WORKSPACE}/install/deploy/kubernetes"
