@@ -4,11 +4,11 @@ pipeline {
 
     environment {
 
-            appName = 'discovery-server'
+            appName = 'news_application'
 
             /* Do not change below this line! */
             k8configPath = "${WORKSPACE}/install/deploy/kubernetes"
-            configFile = "discovery-server-RU-deployment.yaml"
+            configFile = "news-application-RU-deployment.yaml"
     }
 
     stages {
@@ -23,7 +23,7 @@ pipeline {
 					extensions: [[$class: 'CleanCheckout']],
 					submoduleCfg: [],
 					//userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
-					userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
+					userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_News_Application.git']]
 
 				])
 			}*/
