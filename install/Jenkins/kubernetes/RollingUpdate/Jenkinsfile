@@ -1,0 +1,37 @@
+pipeline {
+
+    agent { label "k8-master" }
+
+    environment {
+
+            appName = 'discovery-server'
+
+            /* Do not change below this line! */
+            k8configPath = "${WORKSPACE}/install/deploy/kubernetes"
+            configFile = "discovery-server-RU-deployment.yaml"
+    }
+
+    stages {
+		stage('Clone Repo') {
+			steps {
+				checkout scm
+			}
+			/*steps {
+			    	checkout([$class: 'GitSCM',
+					branches: [[name: '/master']],
+					doGenerateSubmoduleConfigurations: false,
+					extensions: [[$class: 'CleanCheckout']],
+					submoduleCfg: [],
+					//userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
+					userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
+
+				])
+			}*/
+		}
+		stage('Build Application') {
+			steps{
+				sh "kubectl apply -f ${env.k8configPath}/${env.configFile}"
+			}
+		}
+    }
+}
