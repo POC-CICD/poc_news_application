@@ -42,7 +42,7 @@ spec:
         - name: BIZ_APPLICATION_URL
           value: "-Dbiz.application.url=http://biz-application-service.default.svc.cluster.local:9601"
         command: ["java"]
-        args: ["$(SERVER_PORT)", "$(BIZ_APPLICATION_URL)", "$(DISCOVERY_SERVER_URL)",  "-Deureka.instance.preferIpAddress=true", "-Deureka.instance.ipAddress=$(MY_POD_IP)", "-jar", "/usr/src/news-application-SNAPSHOT.jar"]
+        args: ["$(SERVER_PORT)", "$(BIZ_APPLICATION_URL)", "$(DISCOVERY_SERVER_URL)",  "-Deureka.instance.preferIpAddress=true", "-Deureka.instance.ipAddress=news-application-service", "-jar", "/usr/src/news-application-SNAPSHOT.jar"]
         readinessProbe:
           httpGet:
             path: /
