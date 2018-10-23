@@ -1,3 +1,6 @@
+import groovy.json.JsonSlurper
+
+
 def DeploymentStatus(namespace, app) {
     for (int i=0; i <= 40 ; i++){
         script {
@@ -21,6 +24,16 @@ def DeploymentStatus(namespace, app) {
 
 }
 
+node{
+    URL apiUrl = new URL("https://hub.docker.com/v2/repositories/nisumpk/news_application/tags/?page_size=1024")
+    def json = new JsonSlurper().parseText(apiUrl.text)
+    def tags = json.results.name
+    list = tags.join('\n')
+
+    println "test   " + tags
+}
+
+
 pipeline {
 
     agent { label "k8-master" }
@@ -33,6 +46,10 @@ pipeline {
             k8configPath = "${WORKSPACE}/install/deploy/kubernetes"
             configFile = "news-application-RU-deployment.yaml"
     }
+    parameters {
+        choice(choices: "${list}", description: 'Available Docker Images', name: 'SelectedImage')
+    }
+
 
     stages {
 		stage('Clone Repo') {
@@ -51,6 +68,16 @@ pipeline {
 				])
 			}*/
 		}
+        stage('chooseDockerTags') {
+            steps {
+                script {
+
+                    println " Chosen Docker Image Version  === ${params.SelectedImage}"
+                    def sedCommand = sh "sed -i \'s/nisumpk\\/news_application/nisumpk\\/news_application:${params.SelectedImage}/\' ${env.k8configPath}/${env.configFile}"
+                }
+            }
+
+        }
 		stage('Build Application') {
 			steps{
 				sh "kubectl apply -f ${env.k8configPath}/${env.configFile}"
