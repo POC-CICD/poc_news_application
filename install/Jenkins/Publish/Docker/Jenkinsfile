@@ -9,9 +9,14 @@ pipeline {
     dockerHost = 'localhost'
   }
 
-  agent { label 'docker-host' }
+  agent any
+
+  tools {
+    maven 'apache-maven'
+  }
 
   stages {
+
     stage('Clone Application') {
 
         /* Git checkout using declarative method 'scm' */
@@ -19,27 +24,21 @@ pipeline {
             checkout scm
         }
 
-        /* Git checkout */
-        /*steps {
-            checkout([$class: 'GitSCM',
-            branches: [[name: '/master']],
-            doGenerateSubmoduleConfigurations: false,
-            extensions: [[$class: 'CleanCheckout']],
-            submoduleCfg: [],
-            userRemoteConfigs: [[credentialsId: 'b2ed5912-90f0-40fb-8f98-a35933a55f30', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
-            //userRemoteConfigs: [[credentialsId: '16e9c02e-8b5a-41de-b05e-5c0ac770dc97', url: 'https://github.com/nisum-inc/POC_Discovery_Server.git']]
-            ])
-        }*/
-    }
+    } // end of stage
+
     stage('Build Application') {
+
     	/* this is temporary step, ideally jar file should be downloaded from any artifact server. */
     	steps {
-    		sh "cd ${WORKSPACE} && ${MAVEN_HOME}/bin/mvn -Dmaven.test.failure.ignore -Dmaven.test.skip=true clean package"
+    		sh "cd ${WORKSPACE} && mvn -Dmaven.test.failure.ignore -Dmaven.test.skip=true clean package"
     	}
-    }
+
+    } // end of stage
 
     stage('Building Images') {
-      steps{
+
+      steps {
+
         script {
                 //def application = """${app}"""
                 //application = application.replaceAll("_", "-")
@@ -50,23 +49,31 @@ pipeline {
                 /* Building docker image */
                 docker.build(registry + "/" + app.appName.replaceAll("-", "_"), "-f ${WORKSPACE}/install/deploy/docker/" + app.appName.replaceAll("-", "_") + "/Dockerfile ${WORKSPACE}/install/deploy/docker")
         }
-      }
-    }
+
+      } // end of steps
+
+    } // end of stage
 
     stage('Tagging Images') {
-        steps{
-            script {
 
+        steps {
+
+            script {
                 commit= sh (returnStatus: true, script: "git log -1 --pretty=%h > gitOutput.txt")
                 gitStatus = readFile('gitOutput.txt').trim()
 
                 /* Assigning tag as Jenkins git pretty name and Build_Number for tracking pupose */
                 sh script: "docker tag " + registry + "/" + app.appName.replaceAll("-", "_") + ":latest " + registry + "/" + app.appName.replaceAll("-", "_") + ":" + gitStatus + "_$BUILD_NUMBER"
             }
-        }
-    }
+
+        } // end of steps
+
+    } // end of stage
+
     stage('Push Images To Docker-Hub') {
-       steps{
+
+       steps {
+
            script{
 
                commit= sh (returnStatus: true, script: "git log -1 --pretty=%h > gitOutput.txt")
@@ -82,7 +89,11 @@ pipeline {
                     sh "docker logout"
                }
            }
-       }
-    }
-  }
-}
+
+       } // end of steps
+
+    } // end of stage
+
+  } // end of all stages
+
+} // end of pipeline
