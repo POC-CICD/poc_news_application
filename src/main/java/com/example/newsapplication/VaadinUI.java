@@ -30,8 +30,8 @@ public class VaadinUI extends UI {
                 .map(company -> company.getTwitterUsername())
                 .map(twitterUsername -> Timeline.profile(twitterUsername))
                 .forEach(horizontalLayout::addComponent);
-        
-        layout.addComponent(new Label("Version 1.0.0.0"));
+       
     }
 
+    layout.addComponent(new Label("Version 1.0.0.0"));
 }
