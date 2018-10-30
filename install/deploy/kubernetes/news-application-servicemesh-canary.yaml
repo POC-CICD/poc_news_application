@@ -10,7 +10,12 @@ spec:
   - route:
     - destination:
         host: news-application
-        subset: news-application-v1
+        subset: news-application-production
+      weight: 90
+    - destination:
+        host: news-application
+        subset: news-application-uat
+      weight: 10
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -20,9 +25,9 @@ metadata:
 spec:
   host: news-application
   subsets:
-  - name: news-application-v1
+  - name: news-application-production
     labels:
-      version: news-application-v1
-  - name: news-application-v2
+      version: news-application-production
+  - name: news-application-uat
     labels:
-      version: news-application-v2
+      version: news-application-uat
