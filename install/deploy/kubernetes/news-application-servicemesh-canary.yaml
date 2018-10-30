@@ -11,11 +11,6 @@ spec:
     - destination:
         host: news-application
         subset: news-application-production
-      weight: 90
-    - destination:
-        host: news-application
-        subset: news-application-uat
-      weight: 10
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
