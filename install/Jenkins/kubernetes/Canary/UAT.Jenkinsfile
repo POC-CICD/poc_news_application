@@ -72,7 +72,9 @@ pipeline {
 
 		    steps {
 
+		      script {
                 canaryType = "uat"
+              }
 
 		        deleteK8Config(env.k8configPath + "/" + env.appName + "-deployment-" + env.namespace + canaryType + ".yaml")
                 applyK8ConfigWithIstio(env.k8configPath + "/" + env.appName + "-deployment-" + env.namespace + canaryType + ".yaml")
