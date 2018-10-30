@@ -70,8 +70,12 @@ pipeline {
                 switchTo = currentDeployingValue(env.namespace, "blue", "green", env.appName).toLowerCase()
             }*/
 
-            def canaryType = "production"
 		    steps {
+
+		      script {
+		        canaryType = "production"
+		      }
+
 		        deleteK8Config(env.k8configPath + "/" + env.appName + "-deployment-" + env.namespace + canaryType + ".yaml")
                 applyK8ConfigWithIstio(env.k8configPath + "/" + env.appName + "-deployment-" + env.namespace + canaryType + ".yaml")
 
