@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: news-application
+  namespace: canary
+  labels:
+    app: news-application
+spec:
+  type: NodePort
+  ports:
+  - port: 9201
+    nodePort: 30255
+    targetPort: 9201
+    name: http
+  selector:
+    app: news-application
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: news-application-uat
+  namespace: canary
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: news-application
+        version: news-application-uat
+    spec:
+      containers:
+      - name: news-application-uat
+        image: nisumpk/news_application
+        ports:
+        - containerPort: 9201
+        env:
+        - name: SERVER_PORT
+          value: -Dserver.port=9201
+        - name: DISCOVERY_SERVER_URL
+          value: "-Deureka.client.serviceUrl.defaultZone=http://discovery-server:7001/eureka/"
+        - name: BIZ_APPLICATION_URL
+          value: "-Dbiz.application.url=http://biz-application:9601"
+        command: ["java"]
+        args: ["$(SERVER_PORT)", "$(BIZ_APPLICATION_URL)", "$(DISCOVERY_SERVER_URL)", "-jar", "/usr/src/news-application-SNAPSHOT.jar"]
