@@ -6,6 +6,8 @@ import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.UI;
 import org.springframework.hateoas.Resources;
 import org.vaadin.addon.twitter.Timeline;
+import com.vaadin.ui.Label;
+
 
 /**
  * @author Alejandro Duarte.
