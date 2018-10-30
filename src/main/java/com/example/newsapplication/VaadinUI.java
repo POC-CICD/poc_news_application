@@ -6,7 +6,6 @@ import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.UI;
 import org.springframework.hateoas.Resources;
 import org.vaadin.addon.twitter.Timeline;
-import com.vaadin.ui.Label;
 
 
 /**
@@ -33,5 +32,4 @@ public class VaadinUI extends UI {
        
     }
 
-    layout.addComponent(new Label("Version 1.0.0.0"));
 }
