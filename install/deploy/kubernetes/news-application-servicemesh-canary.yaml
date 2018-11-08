@@ -1,11 +1,29 @@
 apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: news-application-gateway
+  namespace: canary
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 8060
+      name: http8060
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: news-application-virtualservice
   namespace: canary
 spec:
+  gateways:
+  - news-application-gateway
   hosts:
-  - news-application
+  - "*"
   http:
   - route:
     - destination:
