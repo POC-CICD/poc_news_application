@@ -1,0 +1,36 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Values.application.name }}-{{ .Values.deploymentType }}
+  namespace: {{ .Values.service.namespace }}
+  labels:
+    name: {{ .Values.application.name }}
+    service: {{ .Values.service.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      name: {{ .Values.application.name }}
+      type: backend
+  template:
+    metadata:
+      labels:
+        name: {{ .Values.application.name }}
+        type: backend
+        version: {{ .Chart.Version }}
+        deploymentType: {{ .Values.deploymentType }}
+    spec:
+      containers:
+      - name: {{ .Values.application.name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        env:
+        - name: SERVER_PORT
+          value: "-Dserver.port={{ .Values.service.port }}"
+        - name: BIZ_APPLICATION_URL
+          value: -Dbiz.application.url=http://{{ .Values.application.bizSVCName }}:{{ .Values.application.bizPort }}
+        - name: DISCOVERY_SERVER_URL
+          value: "-Deureka.client.serviceUrl.defaultZone=http://{{ .Values.discoveryServer.url }}:{{ .Values.discoveryServer.port }}/eureka/"
+        command: ["java"]
+        args: ["$(SERVER_PORT)", "$(DISCOVERY_SERVER_URL)", "$(BIZ_APPLICATION_URL)", "-Deureka.instance.preferIpAddress=true", "-Deureka.instance.ipAddress={{ .Values.service.name }}", "-jar", "{{ .Values.application.jarPath }}/{{ .Values.application.jarName }}"]
