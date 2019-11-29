@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: news-application
-        image: nisumpk/news_application
+        image: poccicdsaad/news_application
         ports:
         - containerPort: 9201
         env:
